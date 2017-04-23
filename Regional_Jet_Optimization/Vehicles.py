@@ -96,6 +96,57 @@ def base_setup():
     wing.flaps.chord             = 0.280
     
     wing.dynamic_pressure_ratio  = 1.0
+    
+    # Root
+    
+    segment = SUAVE.Components.Wings.Segment()
+    segment.tag                   = 'root'
+    segment.percent_span_location = 0.0
+    segment.twist                 = 4. * Units.deg
+    segment.root_chord_percent    = 1.
+    segment.dihedral_outboard     = 2.5 * Units.degrees
+    segment.sweeps.quarter_chord  = 28.225 * Units.degrees
+    wing.Segments.append(segment)    
+    
+    
+    # Yehudi
+
+    
+    segment = SUAVE.Components.Wings.Segment()
+    segment.tag                   = 'yehudi'
+    segment.percent_span_location = 0.324
+    segment.twist                 = (wing.twists.root*(1-segment.percent_span_location)) * Units.deg
+    segment.root_chord_percent    = 0.5
+    segment.dihedral_outboard     = 5.5 * Units.degrees
+    segment.sweeps.quarter_chord  = 25. * Units.degrees
+
+    wing.Segments.append(segment)
+    
+    # set tip section start point
+
+    
+    segment = SUAVE.Components.Wings.Segment()
+    segment.tag                   = 'section_2'
+    segment.percent_span_location = 0.963
+    segment.twist                 = (wing.twists.root*(1-segment.percent_span_location))  * Units.deg
+    segment.root_chord_percent    = 0.220
+    segment.dihedral_outboard     = 5.5 * Units.degrees
+    segment.sweeps.quarter_chord  = 56.75 * Units.degrees
+
+    wing.Segments.append(segment)
+    
+    # Add a tip
+
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'Tip'
+    segment.percent_span_location = 1.
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 0.782/7.760
+    segment.dihedral_outboard     = 0.
+    segment.sweeps.quarter_chord  = 0.
+
+    wing.Segments.append(segment)          
 
     # add to vehicle
     vehicle.append_component(wing)
@@ -134,6 +185,25 @@ def base_setup():
     wing.symmetric               = True
 
     wing.dynamic_pressure_ratio                     = 0.9
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'root_segment'
+    segment.percent_span_location = 0.0
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 1.0
+    segment.dihedral_outboard     = 8.63 * Units.degrees
+    segment.sweeps.quarter_chord  = 38.42 * Units.degrees
+    wing.Segments.append(segment)         
+    
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'segment'
+    segment.percent_span_location = 0.91
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 0.35
+    segment.dihedral_outboard     = 8.63 * Units.degrees
+    segment.sweeps.quarter_chord  = 48.17 * Units.degrees
+    wing.Segments.append(segment)             
 
     # add to vehicle
     vehicle.append_component(wing)
@@ -172,6 +242,34 @@ def base_setup():
     wing.symmetric               = False
 
     wing.dynamic_pressure_ratio                     = 1.0
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'root'
+    segment.percent_span_location = 0.0
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 1.
+    segment.dihedral_outboard     = 0 * Units.degrees
+    segment.sweeps.quarter_chord  = 63.63 * Units.degrees
+    wing.Segments.append(segment)      
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'segment_1'
+    segment.percent_span_location = 0.194
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 0.540
+    segment.dihedral_outboard     = 0. * Units.degrees
+    segment.sweeps.quarter_chord  = 30.0 * Units.degrees
+    wing.Segments.append(segment)  
+    
+    segment = SUAVE.Components.Wings.Segment() 
+    segment.tag                   = 'segment_2'
+    segment.percent_span_location = 0.961
+    segment.twist                 = 0. * Units.deg
+    segment.root_chord_percent    = 0.175
+    segment.dihedral_outboard     = 0.0 * Units.degrees
+    segment.sweeps.quarter_chord  = 51.0 * Units.degrees
+    wing.Segments.append(segment)                 
+    
 
     # add to vehicle
     vehicle.append_component(wing)
@@ -444,6 +542,15 @@ def configs_setup(vehicle):
     configs.append(config)
     
     config.maximum_lift_coefficient = 1.2
+    
+    # ------------------------------------------------------------------
+    #   Initial Configuration
+    # ------------------------------------------------------------------
+    
+    config = SUAVE.Components.Configs.Config(base_config)
+    config.tag = 'initial'
+
+    configs.append(config)    
 
 
     # ------------------------------------------------------------------

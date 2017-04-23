@@ -11,6 +11,7 @@ import SUAVE
 from SUAVE.Core import Units, Data
 import numpy as np
 import copy
+from scipy import integrate
 from SUAVE.Analyses.Process import Process
 from SUAVE.Methods.Propulsion.turbofan_sizing import turbofan_sizing
 from SUAVE.Methods.Geometry.Two_Dimensional.Cross_Section.Propulsion.compute_turbofan_geometry import compute_turbofan_geometry
@@ -105,6 +106,158 @@ def simple_sizing(nexus):
     configs=nexus.vehicle_configurations
     base=configs.base
     
+    for config in configs:   
+        if config.tag == 'initial': # ?????
+            continue  
+        for wing in config.wings:
+            
+            # This procedure is created under the assumption that only the main wing is being modified
+            if wing.tag != 'main_wing':
+                #wing = SUAVE.Methods.Geometry.Two_Dimensional.Planform.wing_planform(wing)
+                if wing.tag == 'horizontal_stabilizer':
+                    wing.areas.reference        = configs.initial.wings[wing.tag].areas.reference*config.wings['main_wing'].areas.reference/configs.initial.wings['main_wing'].areas.reference                
+                wing.areas.wetted   = 2.0 * wing.areas.reference
+                wing.areas.exposed  = 0.8 * wing.areas.wetted
+                wing.areas.affected = 0.6 * wing.areas.reference                
+                continue
+            
+            ## For testing OpenVSP issue
+            wing.areas.wetted   = 2.0 * wing.areas.reference
+
+            ## For testing OpenVSP issue
+            wing.areas.wetted   = 2.0 * wing.areas.reference
+            #wing.areas.exposed  = 0.8 * wing.areas.wetted
+            #wing.areas.affected = 0.6 * wing.areas.reference                
+            #continue            
+
+            # *** Initial values of wing geometry ***
+            
+            initial_origin = configs.initial.wings[wing.tag].origin
+       
+            # initial reference area 
+            S0   = configs.initial.wings[wing.tag].areas.reference
+            # full span 
+            b0_full_span  = configs.initial.wings[wing.tag].spans.projected 
+             
+            # intial chord,  relative chond sprd orgin aan of each segment of the wing stored in array 
+            r0 = []  #r[0] is root chord, r[i=1,2..n] = end chord of segment i
+            b0 = []  #b[0] is semispan, b[i=1,2..n] = span of segment i
+            rs0 = [] #rs0[0] = 0, rs0[i] = x distance from segment root origin to segment tip origin
+            n_segments = len(wing.Segments.keys())
+            #print n_segments
+            for i_segs in xrange(n_segments):
+                if i_segs == 0:
+                    r0.append(configs.initial.wings[wing.tag].chords.root)
+                    b0.append(configs.initial.wings[wing.tag].spans.projected*0.5)
+                    rs0.append(0)
+                else:
+                    b0.append((configs.initial.wings[wing.tag].Segments[i_segs].percent_span_location - configs.initial.wings[wing.tag].Segments[i_segs-1].percent_span_location)*b0[0])
+                    r0.append(r0[0]*configs.initial.wings[wing.tag].Segments[i_segs].root_chord_percent)
+                    rs0.append(b0[i_segs]*np.tan(configs.initial.wings[wing.tag].Segments[i_segs-1].sweeps.quarter_chord))
+              
+            anchor_x = initial_origin[0] + .25*r0[0]
+       
+
+            # *** modified geometry of wing ***            
+            # unpack
+            if wing.tag == 'horizontal_stabilizer':
+                sref        = configs.initial.wings[wing.tag].areas.reference*config.wings['main_wing'].areas.reference/configs.initial.wings['main_wing'].areas.reference
+            sref        = wing.areas.reference
+            taper       = wing.taper
+            sweep       = wing.sweeps.quarter_chord
+            ar          = wing.aspect_ratio
+            t_c_w       = wing.thickness_to_chord
+            dihedral    = wing.dihedral 
+            vertical    = wing.vertical
+            symmetric   = wing.symmetric
+            origin      = wing.origin
+            
+            # check 
+            wing_tip_constraint = 0.
+
+            # calculate
+            span       = (ar*sref)**.5
+            chord_root = r0[0]*sref/S0*b0_full_span /span
+            chord_tip  = 0.0 #imposed condition for chord tip 
+            b_full_span = span 
+            
+            r = [] #r[0] is root chord, r[i] = end chord of segment i
+            b = [] #b[0] is semispan, b[i] = span of segment i
+            for i_segs in  xrange(n_segments):
+                if i_segs == 0: 
+                    r.append(chord_root)
+                    b.append(0.5*span)
+                elif i_segs == n_segments: 
+                    r.append(chord_tip)
+                else:
+                    r.append(r0[i_segs]*(r[0]/r0[0]))
+                    b.append(b0[i_segs]*(b_full_span/b0_full_span ))
+                
+            trap_area = 0
+            for i_segs in xrange(n_segments-1):
+                trap_area = trap_area + ((r[i_segs] + r[i_segs+1])/2)*b[i_segs+1]
+
+
+            # new wetted area 
+            swet = 2.*2.*trap_area*(1.0 + 0.2*t_c_w) # top/bottom + left/right 
+            
+            # new mean aerodynamic chord  ????
+            mac_arg = 0
+            for i_segs in xrange(n_segments-1):
+                func = lambda y: (r[i_segs] - ((r[i_segs] - r[i_segs+1])/b[i_segs+1])*y)**2
+                mac_arg =  mac_arg + integrate.quad(func, 0, b[i_segs+1])[0] 
+            
+            mac = mac_arg*(2/sref)
+            
+            rs = []
+            theta = []
+            # calculate sweeps
+            for i_segs in xrange(n_segments):
+                rs.append(rs0[i_segs]*(r[0]/r0[0]))
+            
+            for i_segs in xrange(n_segments-1):           
+                theta.append(np.arctan(rs[i_segs+1]/b[i_segs+1]))
+            
+            theta.append(0)
+            
+            # estimating aerodynamic center coordinates
+            yb = []
+            A = []
+            for i_segs in xrange(n_segments-1):           
+                yb.append( (r[i_segs]+2*r[i_segs+1])/(3*(r[i_segs] + r[i_segs + 1]))*b[i_segs+1])
+                A.append((r[i_segs] + r[i_segs+1])/2.*b[i_segs+1])
+
+            y_coord = (np.dot(yb,A))/sref*2.  #??????
+            x_coord = y_coord*np.tan(theta[0]) #?????
+            z_coord = y_coord * np.tan(dihedral) # does not consider possibility of multiple sections
+                
+            if vertical:
+                temp    = y_coord * 1.
+                y_coord = z_coord * 1.
+                z_coord = temp
+        
+            if symmetric:
+                y_coord = 0.   
+                
+          
+            # update
+            wing.chords.root                = chord_root
+            wing.total_length               = chord_root
+            wing.chords.tip                 = chord_tip
+            wing.chords.mean_aerodynamic    = mac
+            wing.areas.wetted               = swet
+            wing.spans.projected            = span
+            wing.aerodynamic_center         = [x_coord , y_coord, z_coord]    
+            
+            for i_segments in xrange(n_segments):
+                wing.Segments[i_segs].sweeps.quarter_chord = theta[i_segs]
+                wing.Segments[i_segs].root_chord_percent    = r[i_segs]/r[0]   
+                        
+            wing.origin[0] = anchor_x - .25*r[0]
+                
+            wing.areas.exposed  = 0.8 * wing.areas.wetted
+            wing.areas.affected = 0.6 * wing.areas.reference  
+    
     #find conditions
     air_speed   = nexus.missions.base.segments['cruise'].air_speed 
     altitude    = nexus.missions.base.segments['climb_5'].altitude_end
@@ -133,12 +286,12 @@ def simple_sizing(nexus):
     for config in configs:
         config.wings.horizontal_stabilizer.areas.reference = (26.0/92.0)*config.wings.main_wing.areas.reference
             
-        for wing in config.wings:
+        #for wing in config.wings:
             
-            wing = SUAVE.Methods.Geometry.Two_Dimensional.Planform.wing_planform(wing)
+            #wing = SUAVE.Methods.Geometry.Two_Dimensional.Planform.wing_planform(wing)
             
-            wing.areas.exposed  = 0.8 * wing.areas.wetted
-            wing.areas.affected = 0.6 * wing.areas.reference
+            #wing.areas.exposed  = 0.8 * wing.areas.wetted
+            #wing.areas.affected = 0.6 * wing.areas.reference
             
 
 
@@ -149,48 +302,48 @@ def simple_sizing(nexus):
         compute_turbofan_geometry(config.propulsors['turbofan'], conditions)
 
 
-    # ------------------------------------------------------------------
-    #   Landing Configuration
-    # ------------------------------------------------------------------
-    landing = nexus.vehicle_configurations.landing
-    landing_conditions = Data()
-    landing_conditions.freestream = Data()
+    ## ------------------------------------------------------------------
+    ##   Landing Configuration
+    ## ------------------------------------------------------------------
+    #landing = nexus.vehicle_configurations.landing
+    #landing_conditions = Data()
+    #landing_conditions.freestream = Data()
 
-    # landing weight
-    landing.mass_properties.landing = 0.85 * config.mass_properties.takeoff
+    ## landing weight
+    #landing.mass_properties.landing = 0.85 * config.mass_properties.takeoff
     
-    # Landing CL_max
-    altitude = nexus.missions.base.segments[-1].altitude_end
-    atmosphere = SUAVE.Analyses.Atmospheric.US_Standard_1976()
-    freestream_landing  = atmosphere.compute_values(0.)
-    #p, T, rho, a, mu = atmosphere.compute_values(0.)
-    landing_conditions.freestream.velocity           = nexus.missions.base.segments['descent_3'].air_speed
-    landing_conditions.freestream.density            = freestream_landing.density
-    landing_conditions.freestream.dynamic_viscosity  = freestream_landing.dynamic_viscosity
-    CL_max_landing,CDi = compute_max_lift_coeff(landing,landing_conditions)
-    landing.maximum_lift_coefficient = CL_max_landing
+    ## Landing CL_max
+    #altitude = nexus.missions.base.segments[-1].altitude_end
+    #atmosphere = SUAVE.Analyses.Atmospheric.US_Standard_1976()
+    #freestream_landing  = atmosphere.compute_values(0.)
+    ##p, T, rho, a, mu = atmosphere.compute_values(0.)
+    #landing_conditions.freestream.velocity           = nexus.missions.base.segments['descent_3'].air_speed
+    #landing_conditions.freestream.density            = freestream_landing.density
+    #landing_conditions.freestream.dynamic_viscosity  = freestream_landing.dynamic_viscosity
+    #CL_max_landing,CDi = compute_max_lift_coeff(landing,landing_conditions)
+    #landing.maximum_lift_coefficient = CL_max_landing
     
-    #Takeoff CL_max
-    takeoff = nexus.vehicle_configurations.takeoff
-    takeoff_conditions = Data()
-    takeoff_conditions.freestream = Data()    
-    altitude = nexus.missions.base.airport.altitude
-    freestream_takeoff  = atmosphere.compute_values(altitude)
+    ##Takeoff CL_max
+    #takeoff = nexus.vehicle_configurations.takeoff
+    #takeoff_conditions = Data()
+    #takeoff_conditions.freestream = Data()    
+    #altitude = nexus.missions.base.airport.altitude
+    #freestream_takeoff  = atmosphere.compute_values(altitude)
    
-    #p, T, rho, a, mu = atmosphere.compute_values(altitude)
-    takeoff_conditions.freestream.velocity           = nexus.missions.base.segments.climb_1.air_speed
-    takeoff_conditions.freestream.density            = freestream_takeoff.density
-    takeoff_conditions.freestream.dynamic_viscosity  = freestream_takeoff.dynamic_viscosity 
-    max_CL_takeoff,CDi = compute_max_lift_coeff(takeoff,takeoff_conditions) 
-    takeoff.maximum_lift_coefficient = max_CL_takeoff
+    ##p, T, rho, a, mu = atmosphere.compute_values(altitude)
+    #takeoff_conditions.freestream.velocity           = nexus.missions.base.segments.climb_1.air_speed
+    #takeoff_conditions.freestream.density            = freestream_takeoff.density
+    #takeoff_conditions.freestream.dynamic_viscosity  = freestream_takeoff.dynamic_viscosity 
+    #max_CL_takeoff,CDi = compute_max_lift_coeff(takeoff,takeoff_conditions) 
+    #takeoff.maximum_lift_coefficient = max_CL_takeoff
     
-    #Base config CL_max
-    base = nexus.vehicle_configurations.base
-    base_conditions = Data()
-    base_conditions.freestream = takeoff_conditions.freestream   
-    max_CL_base,CDi = compute_max_lift_coeff(base,base_conditions) 
-    base.maximum_lift_coefficient = max_CL_base    
-    # done!
+    ##Base config CL_max
+    #base = nexus.vehicle_configurations.base
+    #base_conditions = Data()
+    #base_conditions.freestream = takeoff_conditions.freestream   
+    #max_CL_base,CDi = compute_max_lift_coeff(base,base_conditions) 
+    #base.maximum_lift_coefficient = max_CL_base    
+    ## done!
     
     return nexus
 

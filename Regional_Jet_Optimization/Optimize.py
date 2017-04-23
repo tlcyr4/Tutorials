@@ -38,7 +38,7 @@ def main():
     #print output
   
     
-    #variable_sweep(problem)  #uncomment this to view some contours of the problem
+    variable_sweep(problem)  #uncomment this to view some contours of the problem
     print 'fuel burn=', problem.summary.base_mission_fuelburn
     print 'fuel margin=', problem.all_constraints()
     
@@ -97,7 +97,11 @@ def setup():
     # [ 'alias' , ['data.path1.name','data.path2.name'] ]
 
     problem.aliases = [
-        [ 'wing_area'                        ,   ['vehicle_configurations.*.wings.main_wing.areas.reference',
+        [ 'wing_area'                        ,   ['vehicle_configurations.base.wings.main_wing.areas.reference',
+                                                  'vehicle_configurations.cruise.wings.main_wing.areas.reference',
+                                                  'vehicle_configurations.takeoff.wings.main_wing.areas.reference',
+                                                  'vehicle_configurations.landing.wings.main_wing.areas.reference',
+                                                  'vehicle_configurations.short_field_takeoff.wings.main_wing.areas.reference',                                                  
                                                   'vehicle_configurations.*.reference_area'                    ]],
         [ 'cruise_altitude'                  , 'missions.base.segments.climb_5.altitude_end'                    ],
         [ 'fuel_burn'                        ,    'summary.base_mission_fuelburn'                               ],
