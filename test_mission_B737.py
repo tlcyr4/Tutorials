@@ -1,7 +1,7 @@
-# test_mission_B737.py
+# tut_mission_B737.py
 # 
-# Created:  Jun 2017, Tigar Cyr 
-# Modified: 
+# Created:  Aug 2014, SUAVE Team
+# Modified: Jan 2017, SUAVE Team
 
 """ setup file for a mission with a 737
 """
@@ -13,9 +13,7 @@
 
 import SUAVE
 from SUAVE.Core import Units
-import SUAVE.Analyses.Aerodynamics.Example as Example
-import SUAVE.Analyses.Aerodynamics.Structured_Example as Structured_Example
-#import SUAVE.Analyses.Aerodynamics.Aerodynamics as Aerodynamics
+
 import numpy as np
 import pylab as plt
 
@@ -27,6 +25,7 @@ Data, Container
 
 from SUAVE.Methods.Propulsion.turbofan_sizing import turbofan_sizing
 from SUAVE.Methods.Geometry.Two_Dimensional.Cross_Section.Propulsion import compute_turbofan_geometry
+from SUAVE.Analyses.Aerodynamics.Transonic import Transonic
 from SUAVE.Input_Output.Results import  print_parasite_drag,  \
      print_compress_drag, \
      print_engine_data,   \
@@ -64,16 +63,16 @@ def main():
     ref_condition = Data()
     ref_condition.mach_number = 0.3
     ref_condition.reynolds_number = 12e6     
-    ###print_parasite_drag(ref_condition,configs.cruise,analyses,'B737_parasite_drag.dat')
+#    print_parasite_drag(ref_condition,configs.cruise,analyses,'B737_parasite_drag.dat')
 
     # print compressibility drag data into file
-    ###print_compress_drag(configs.cruise,analyses,filename = 'B737_compress_drag.dat')
+#    print_compress_drag(configs.cruise,analyses,filename = 'B737_compress_drag.dat')
 
     # print mission breakdown
-    print_mission_breakdown(results,filename='B737_mission_breakdown.dat')
+#    print_mission_breakdown(results,filename='B737_mission_breakdown.dat')
 
     # plt the old results
-    #plot_mission(results)
+    plot_mission(results)
 
 
     return
@@ -146,7 +145,7 @@ def base_analysis(vehicle):
 
     # ------------------------------------------------------------------
     #  Aerodynamics Analysis
-    aerodynamics = Structured_Example.Structured_Example()
+    aerodynamics = SUAVE.Analyses.Aerodynamics.Transonic.Transonic()
     aerodynamics.geometry = vehicle
 
     aerodynamics.settings.drag_coefficient_increment = 0.0000
@@ -716,38 +715,38 @@ def plot_mission(results,line_style='bo-'):
     # ------------------------------------------------------------------
     #   Aerodynamics 2
     # ------------------------------------------------------------------
-    fig = plt.figure("Drag Components",figsize=(8,10))
-    axes = plt.gca()
-    for i, segment in enumerate(results.segments.values()):
-
-        time   = segment.conditions.frames.inertial.time[:,0] / Units.min
-        drag_breakdown = segment.conditions.aerodynamics.drag_breakdown
-        cdp = drag_breakdown.parasite.total[:,0]
-        cdi = drag_breakdown.induced.total[:,0]
-        cdc = drag_breakdown.compressible.total[:,0]
-        cdm = drag_breakdown.miscellaneous.total[:,0]
-        cd  = drag_breakdown.total[:,0]
-
-        if line_style == 'bo-':
-            axes.plot( time , cdp , 'ko-', label='CD parasite' )
-            axes.plot( time , cdi , 'bo-', label='CD induced' )
-            axes.plot( time , cdc , 'go-', label='CD compressibility' )
-            axes.plot( time , cdm , 'yo-', label='CD miscellaneous' )
-            axes.plot( time , cd  , 'ro-', label='CD total'   )
-            if i == 0:
-                axes.legend(loc='upper center')            
-        else:
-            axes.plot( time , cdp , line_style )
-            axes.plot( time , cdi , line_style )
-            axes.plot( time , cdc , line_style )
-            axes.plot( time , cdm , line_style )
-            axes.plot( time , cd  , line_style )            
-
-    axes.set_xlabel('Time (min)')
-    axes.set_ylabel('CD')
-    axes.grid(True)
-    plt.savefig("B737_drag.pdf")
-    plt.savefig("B737_drag.png")
+#    fig = plt.figure("Drag Components",figsize=(8,10))
+#    axes = plt.gca()
+#    for i, segment in enumerate(results.segments.values()):
+#
+#        time   = segment.conditions.frames.inertial.time[:,0] / Units.min
+#        drag_breakdown = segment.conditions.aerodynamics.drag_breakdown
+#        cdp = drag_breakdown.parasite.total[:,0]
+#        cdi = drag_breakdown.induced.total[:,0]
+#        cdc = drag_breakdown.compressible.total[:,0]
+#        cdm = drag_breakdown.miscellaneous.total[:,0]
+#        cd  = drag_breakdown.total[:,0]
+#
+#        if line_style == 'bo-':
+#            axes.plot( time , cdp , 'ko-', label='CD parasite' )
+#            axes.plot( time , cdi , 'bo-', label='CD induced' )
+#            axes.plot( time , cdc , 'go-', label='CD compressibility' )
+#            axes.plot( time , cdm , 'yo-', label='CD miscellaneous' )
+#            axes.plot( time , cd  , 'ro-', label='CD total'   )
+#            if i == 0:
+#                axes.legend(loc='upper center')            
+#        else:
+#            axes.plot( time , cdp , line_style )
+#            axes.plot( time , cdi , line_style )
+#            axes.plot( time , cdc , line_style )
+#            axes.plot( time , cdm , line_style )
+#            axes.plot( time , cd  , line_style )            
+#
+#    axes.set_xlabel('Time (min)')
+#    axes.set_ylabel('CD')
+#    axes.grid(True)
+#    plt.savefig("B737_drag.pdf")
+#    plt.savefig("B737_drag.png")
 
     # ------------------------------------------------------------------
     #   Altitude, sfc, vehicle weight
@@ -1072,8 +1071,43 @@ def missions_setup(base_mission):
     # ------------------------------------------------------------------
 
     missions.base = base_mission
-    
-    
+
+
+    # ------------------------------------------------------------------
+    #   Mission for Constrained Fuel
+    # ------------------------------------------------------------------    
+    fuel_mission = SUAVE.Analyses.Mission.Mission() #Fuel_Constrained()
+    fuel_mission.tag = 'fuel'
+    fuel_mission.range   = 1277. * Units.nautical_mile
+    fuel_mission.payload   = 19000.
+    missions.append(fuel_mission)    
+
+
+    # ------------------------------------------------------------------
+    #   Mission for Constrained Short Field
+    # ------------------------------------------------------------------    
+    short_field = SUAVE.Analyses.Mission.Mission(base_mission) #Short_Field_Constrained()
+    short_field.tag = 'short_field'    
+
+    #airport
+    airport = SUAVE.Attributes.Airports.Airport()
+    airport.altitude   =  0.0  * Units.ft
+    airport.delta_isa  =  0.0
+    airport.atmosphere = SUAVE.Attributes.Atmospheres.Earth.US_Standard_1976()
+    airport.available_tofl = 1500.
+    short_field.airport = airport    
+    missions.append(short_field)
+
+
+
+    # ------------------------------------------------------------------
+    #   Mission for Fixed Payload
+    # ------------------------------------------------------------------    
+    payload = SUAVE.Analyses.Mission.Mission() #Payload_Constrained()
+    payload.tag = 'payload'
+    payload.range   = 2316. * Units.nautical_mile
+    payload.payload   = 19000.
+    missions.append(payload)
 
 
     # done!
