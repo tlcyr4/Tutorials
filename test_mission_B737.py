@@ -3,7 +3,7 @@
 # Created:  Aug 2014, SUAVE Team
 # Modified: Jan 2017, SUAVE Team
 
-""" setup file for a mission with a 737
+""" adapted version of tut_mission_B737 for testing new features
 """
 
 
@@ -145,7 +145,7 @@ def base_analysis(vehicle):
 
     # ------------------------------------------------------------------
     #  Aerodynamics Analysis
-    aerodynamics = SUAVE.Analyses.Aerodynamics.Transonic.Transonic()
+    aerodynamics = SUAVE.Analyses.Aerodynamics.Fidelity_Zero()
     aerodynamics.geometry = vehicle
 
     aerodynamics.settings.drag_coefficient_increment = 0.0000
@@ -950,10 +950,14 @@ def mission_setup(analyses):
 
     segment = Segments.Cruise.Constant_Speed_Constant_Altitude(base_segment)
     segment.tag = "cruise"
+    fzero = analyses.cruise.aerodynamics
+    analyses.cruise.aerodynamics = Transonic()
+    analyses.cruise.aerodynamics.geometry = fzero.geometry
 
     segment.analyses.extend( analyses.cruise )
+    analyses.cruise.aerodynamics = fzero
 
-    segment.air_speed  = 230.412 * Units['m/s']
+    segment.air_speed  = 280.412 * Units['m/s']
     segment.distance   = (3933.65 + 770 - 92.6) * Units.km
 
     # add to mission
