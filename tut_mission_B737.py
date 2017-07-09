@@ -556,8 +556,8 @@ def vehicle_setup():
     #computing the engine length and diameter
     compute_turbofan_geometry(turbofan,None)
 
-    print "sls thrust : ",turbofan.sealevel_static_thrust
-    print "engine length : ",turbofan.engine_length
+    print("sls thrust : ",turbofan.sealevel_static_thrust)
+    print("engine length : ",turbofan.engine_length)
 
     # add  gas turbine network gt_engine to the vehicle 
     vehicle.append_component(turbofan)      

@@ -3,7 +3,7 @@
 # Created:  Aug 2014, SUAVE Team
 # Modified: Jan 2017, SUAVE Team
 
-""" setup file for a mission with a 737
+""" adapted version of tut_mission_B737 for testing new features
 """
 
 
@@ -25,6 +25,7 @@ Data, Container
 from SUAVE.Analyses.Aerodynamics.Transonic import Transonic
 from SUAVE.Methods.Propulsion.turbofan_sizing import turbofan_sizing
 from SUAVE.Methods.Geometry.Two_Dimensional.Cross_Section.Propulsion import compute_turbofan_geometry
+from SUAVE.Analyses.Aerodynamics.Transonic import Transonic
 from SUAVE.Input_Output.Results import  print_parasite_drag,  \
      print_compress_drag, \
      print_engine_data,   \
@@ -62,13 +63,13 @@ def main():
     ref_condition = Data()
     ref_condition.mach_number = 0.3
     ref_condition.reynolds_number = 12e6     
-    print_parasite_drag(ref_condition,configs.cruise,analyses,'B737_parasite_drag.dat')
+#    print_parasite_drag(ref_condition,configs.cruise,analyses,'B737_parasite_drag.dat')
 
     # print compressibility drag data into file
-    print_compress_drag(configs.cruise,analyses,filename = 'B737_compress_drag.dat')
+#    print_compress_drag(configs.cruise,analyses,filename = 'B737_compress_drag.dat')
 
     # print mission breakdown
-    print_mission_breakdown(results,filename='B737_mission_breakdown.dat')
+#    print_mission_breakdown(results,filename='B737_mission_breakdown.dat')
 
     # plt the old results
     plot_mission(results)
@@ -952,6 +953,9 @@ def mission_setup(analyses):
 
     segment = Segments.Cruise.Constant_Speed_Constant_Altitude(base_segment)
     segment.tag = "cruise"
+    fzero = analyses.cruise.aerodynamics
+    analyses.cruise.aerodynamics = Transonic()
+    analyses.cruise.aerodynamics.geometry = fzero.geometry
 
     fzero = analyses.cruise.aerodynamics
     analyses.cruise.aerodynamics = Transonic()
