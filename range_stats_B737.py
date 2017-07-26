@@ -57,19 +57,43 @@ def main():
 
     # mission analysis
     mission = analyses.missions.base
-    results = mission.evaluate()
-    for segment in results.segments.values():
-        conditions.append(segment.conditions)
-    for i in range(iters - 1):
+    ranges = []
     
-        mission.segments.cruise.analyses.aerodynamics.reset()
-        result = mission.evaluate()
-        count = 0
-        for segment in result.segments.values():
-            conditions[count] = conditions[count] + segment.conditions
-            count += 1
-    for i in range(len(conditions)):
-        conditions[i] = conditions[i] / iters
+    # make vehicle
+    vehicle = vehicle_setup()
+    
+    # start timing
+    start = time.time()
+    
+    # start iteration
+    for i in range(iters):
+         # resample Transonic_Icing adjustments
+         mission.segments.cruise.analyses.aerodynamics.reset()
+         
+         # calculate range
+         result = payload_range(vehicle, mission, "cruise")
+         
+         ranges.append(result.range[3])
+         
+    elapsed = time.time() - start
+    
+    data = ranges
+    
+    # calculate probability estimate
+    kde = scipy.stats.gaussian_kde(data)
+    
+    # extract probability density function
+    pdf = kde.pdf(range(1500))
+
+#
+#
+    # plot pdf
+    import matplotlib.pyplot as plt 
+    plt.plot(pdf)
+
+    # print results
+    print "Time Elapsed: " + str(elapsed)
+    print "Ranges: ",ranges
 
     return
 
