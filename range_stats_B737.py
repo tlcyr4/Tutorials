@@ -8,7 +8,7 @@
         set number of iterations as "iters"
         set model in appropriate segment analysis
         make sure model supports reset() or has another way of resampling
-        add title, axes, legend, etc to plot
+        add title, axes, legend, etc. to plot
 
     Can be repurposed to use other vehicles/missions
 """
