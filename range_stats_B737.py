@@ -1,9 +1,16 @@
-# tut_mission_B737.py
+# range_stats_B737.py
 #
-# Created:  Aug 2014, SUAVE Team
-# Modified: Jan 2017, SUAVE Team
+# Created:  Jul 2017, Tigar Cyr
+# Modified:
 
-""" adapted version of tut_mission_B737 for testing new features
+""" script for iteratively testing vehicle flight range with probability density models
+    To Use:
+        set number of iterations as "iters"
+        set model in appropriate segment analysis
+        make sure model supports reset() or has another way of resampling
+        add title, axes, legend, etc to plot
+
+    Can be repurposed to use other vehicles/missions
 """
 
 # ----------------------------------------------------------------------
@@ -25,7 +32,7 @@ from SUAVE.Core import (
 
 from SUAVE.Methods.Propulsion.turbofan_sizing import turbofan_sizing
 from SUAVE.Methods.Geometry.Two_Dimensional.Cross_Section.Propulsion import compute_turbofan_geometry
-from SUAVE.Analyses.Aerodynamics.Transonic_Icing import Transonic_Icing
+from SUAVE.Analyses.Aerodynamics.Icing import Icing
 from SUAVE.Input_Output.Results import print_parasite_drag, \
     print_compress_drag, \
     print_engine_data, \
@@ -53,7 +60,7 @@ def main():
     breakdown = weights.evaluate()
 
     conditions = []
-    iters = 300
+    iters = 1000
 
     # mission analysis
     mission = analyses.missions.base
@@ -67,7 +74,7 @@ def main():
     
     # start iteration
     for i in range(iters):
-         # resample Transonic_Icing adjustments
+         # resample Icing adjustments
          mission.segments.cruise.analyses.aerodynamics.reset()
          
          # calculate range
@@ -936,7 +943,7 @@ def mission_setup(analyses):
     segment = Segments.Cruise.Constant_Speed_Constant_Altitude(base_segment)
     segment.tag = "cruise"
     fzero = analyses.cruise.aerodynamics
-    analyses.cruise.aerodynamics = Transonic_Icing()
+    analyses.cruise.aerodynamics = Icing()
     analyses.cruise.aerodynamics.geometry = fzero.geometry
 
     segment.analyses.extend(analyses.cruise)
@@ -949,7 +956,7 @@ def mission_setup(analyses):
     mission.append_segment(segment)
 
     # ------------------------------------------------------------------
-    #   First Descent Segment: consant speed, constant segment rate
+    #   First Descent Segment: constant speed, constant segment rate
     # ------------------------------------------------------------------
 
     segment = Segments.Descent.Constant_Speed_Constant_Rate(base_segment)
@@ -965,7 +972,7 @@ def mission_setup(analyses):
     mission.append_segment(segment)
 
     # ------------------------------------------------------------------
-    #   Second Descent Segment: consant speed, constant segment rate
+    #   Second Descent Segment: constant speed, constant segment rate
     # ------------------------------------------------------------------
 
     segment = Segments.Descent.Constant_Speed_Constant_Rate(base_segment)
@@ -983,7 +990,7 @@ def mission_setup(analyses):
     mission.append_segment(segment)
 
     # ------------------------------------------------------------------
-    #   Third Descent Segment: consant speed, constant segment rate
+    #   Third Descent Segment: constant speed, constant segment rate
     # ------------------------------------------------------------------
 
     segment = Segments.Descent.Constant_Speed_Constant_Rate(base_segment)
@@ -1001,7 +1008,7 @@ def mission_setup(analyses):
     mission.append_segment(segment)
 
     # ------------------------------------------------------------------
-    #   Fourth Descent Segment: consant speed, constant segment rate
+    #   Fourth Descent Segment: constant speed, constant segment rate
     # ------------------------------------------------------------------
 
     segment = Segments.Descent.Constant_Speed_Constant_Rate(base_segment)
@@ -1019,7 +1026,7 @@ def mission_setup(analyses):
     mission.append_segment(segment)
 
     # ------------------------------------------------------------------
-    #   Fifth Descent Segment: consant speed, constant segment rate
+    #   Fifth Descent Segment: constant speed, constant segment rate
     # ------------------------------------------------------------------
 
     segment = Segments.Descent.Constant_Speed_Constant_Rate(base_segment)

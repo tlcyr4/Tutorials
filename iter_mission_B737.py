@@ -1,9 +1,10 @@
-# tut_mission_B737.py
+# iter_mission_B737.py
 #
-# Created:  Aug 2014, SUAVE Team
-# Modified: Jan 2017, SUAVE Team
+# Created:  Jul 2017, Tigar Cyr
+# Modified: 
 
-""" adapted version of tut_mission_B737 for testing new features
+""" adapted version of tut_mission_B737 for simulation requiring multiple
+    trials: averages resulting conditions
 """
 
 # ----------------------------------------------------------------------
@@ -25,7 +26,7 @@ from SUAVE.Core import (
 
 from SUAVE.Methods.Propulsion.turbofan_sizing import turbofan_sizing
 from SUAVE.Methods.Geometry.Two_Dimensional.Cross_Section.Propulsion import compute_turbofan_geometry
-from SUAVE.Analyses.Aerodynamics.Transonic_Icing import Transonic_Icing
+from SUAVE.Analyses.Aerodynamics.Icing import Icing
 from SUAVE.Input_Output.Results import print_parasite_drag, \
     print_compress_drag, \
     print_engine_data, \
@@ -53,21 +54,25 @@ def main():
     breakdown = weights.evaluate()
 
     conditions = []
-    iters = 300
+    iters = 1000
 
     # mission analysis
     mission = analyses.missions.base
     results = mission.evaluate()
+    # add each segment's conditions to total conditions
     for segment in results.segments.values():
         conditions.append(segment.conditions)
+        
+    # evaluate iteratively
     for i in range(iters - 1):
-    
         mission.segments.cruise.analyses.aerodynamics.reset()
         result = mission.evaluate()
         count = 0
+        # add conditions together
         for segment in result.segments.values():
             conditions[count] = conditions[count] + segment.conditions
             count += 1
+    # divide by number of iterations
     for i in range(len(conditions)):
         conditions[i] = conditions[i] / iters
 
@@ -912,7 +917,7 @@ def mission_setup(analyses):
     segment = Segments.Cruise.Constant_Speed_Constant_Altitude(base_segment)
     segment.tag = "cruise"
     fzero = analyses.cruise.aerodynamics
-    analyses.cruise.aerodynamics = Transonic_Icing()
+    analyses.cruise.aerodynamics = Icing()
     analyses.cruise.aerodynamics.geometry = fzero.geometry
 
     segment.analyses.extend(analyses.cruise)
