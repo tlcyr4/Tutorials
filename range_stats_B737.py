@@ -1,9 +1,16 @@
-# tut_mission_B737.py
+# range_stats_B737.py
 #
-# Created:  Aug 2014, SUAVE Team
-# Modified: Jan 2017, SUAVE Team
+# Created:  Jul 2017, Tigar Cyr
+# Modified:
 
-""" adapted version of tut_mission_B737 for testing new features
+""" script for iteratively testing vehicle flight range with probability density models
+    To Use:
+        set number of iterations as "iters"
+        set model in appropriate segment analysis
+        make sure model supports reset() or has another way of resampling
+        add title, axes, legend, etc. to plot
+
+    Can be repurposed to use other vehicles/missions
 """
 
 # ----------------------------------------------------------------------
